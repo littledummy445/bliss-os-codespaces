@@ -19,6 +19,7 @@ NOVNC_DIR="${STATE_DIR}/noVNC"
 WEBSOCKIFY_VENV="${STATE_DIR}/websockify-venv"
 QEMU_PID=""
 WEBSOCKIFY_PID=""
+APT_UPDATED=0
 
 usage() {
   cat <<EOF
@@ -45,6 +46,25 @@ EOF
 
 die() { echo "error: $*" >&2; exit 1; }
 
+apt_install() {
+  command -v apt-get >/dev/null || die "Missing dependency and apt-get is unavailable to install it automatically."
+  command -v sudo >/dev/null || die "Missing dependency and sudo is unavailable to install it automatically."
+  if [[ "$APT_UPDATED" -eq 0 ]]; then
+    sudo apt-get update
+    APT_UPDATED=1
+  fi
+  sudo DEBIAN_FRONTEND=noninteractive apt-get install -y "$@"
+}
+
+require_command() {
+  local cmd="$1"
+  shift
+  command -v "$cmd" >/dev/null && return 0
+  echo "Installing missing dependency for '$cmd': $*"
+  apt_install "$@"
+  command -v "$cmd" >/dev/null || die "Failed to install dependency for '$cmd'."
+}
+
 cleanup() {
   trap - EXIT INT TERM
   [[ -n "${WEBSOCKIFY_PID}" ]] && kill "${WEBSOCKIFY_PID}" 2>/dev/null || true
@@ -69,9 +89,16 @@ while (($#)); do
   esac
 done
 
-command -v "$QEMU_BIN" >/dev/null || die "QEMU is missing. Install qemu-system-x86 (or set QEMU_BIN)."
-command -v python3 >/dev/null || die "python3 is required for the local web server."
-command -v git >/dev/null || die "git is required to fetch noVNC."
+require_command python3 python3 python3-venv
+require_command git git
+require_command curl curl ca-certificates
+require_command qemu-img qemu-utils
+if ! command -v "$QEMU_BIN" >/dev/null; then
+  [[ "$QEMU_BIN" == "qemu-system-x86_64" ]] || die "QEMU binary '$QEMU_BIN' is missing. Install it or set QEMU_BIN to a valid binary."
+  require_command qemu-system-x86_64 qemu-system-x86
+fi
+[[ "$VNC_PORT" =~ ^[0-9]+$ ]] || die "--vnc-port must be a number."
+(( VNC_PORT >= 5900 )) || die "--vnc-port must be >= 5900."
 mkdir -p "$STATE_DIR"
 
 if [[ ! -s "$ISO_PATH" ]]; then
@@ -106,8 +133,12 @@ echo "Starting websockify on 127.0.0.1:${NOVNC_PORT} -> 127.0.0.1:${VNC_PORT}"
 WEBSOCKIFY_PID=$!
 
 echo "Starting QEMU with ${MEMORY} RAM and ${CPUS} CPUs"
-echo "Open: http://127.0.0.1:${NOVNC_PORT}/vnc.html?autoconnect=true&resize=remote"
-[[ "$NO_BROWSER" -eq 1 ]] || { command -v xdg-open >/dev/null && xdg-open "http://127.0.0.1:${NOVNC_PORT}/vnc.html?autoconnect=true&resize=remote" >/dev/null 2>&1 || true; }
+NOVNC_URL="http://127.0.0.1:${NOVNC_PORT}/vnc.html?autoconnect=true&resize=remote"
+if [[ -n "${CODESPACE_NAME:-}" && -n "${GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN:-}" ]]; then
+  NOVNC_URL="https://${CODESPACE_NAME}-${NOVNC_PORT}.${GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN}/vnc.html?autoconnect=true&resize=remote"
+fi
+echo "Open: ${NOVNC_URL}"
+[[ "$NO_BROWSER" -eq 1 ]] || { command -v xdg-open >/dev/null && xdg-open "${NOVNC_URL}" >/dev/null 2>&1 || true; }
 
 "$QEMU_BIN" \
   -name bliss-os \

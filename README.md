@@ -22,14 +22,14 @@ Click the **Open in GitHub Codespaces** badge at the top of this document or ini
 Execute the main automation shell script inside your open environment terminal window to dynamically install dependencies, format the virtual disk buffers, and pull the latest production system blocks:
 
 ```bash
-chmod +x run-android.sh
-./run-android.sh
+chmod +x run-bliss-novnc.sh
+./run-bliss-novnc.sh
 ```
 
 ### 3. Access the Graphical Screen
 1. Locate the **Ports** dashboard tray at the bottom edge of your editor interface.
-2. Ensure network ports **`8006`** (noVNC interface) and **`3389`** (Optional XRDP/Cinnamon desktop) are toggled to **Public**.
-3. Click the local globe web link icon right next to port **`8006`** to open the graphical screen inside a new browser tab.
+2. Ensure network port **`6080`** (noVNC interface) is forwarded.
+3. Open the URL printed by the script to access Bliss OS in your browser.
 
 ---
 
