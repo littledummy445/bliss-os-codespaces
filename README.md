@@ -4,6 +4,15 @@ A automated development environment configuration designed to run a fully hardwa
 
 [![Open in GitHub Codespaces](https://github.com/codespaces/new)](https://github.com/codespaces/new)
 
+## Usage Guide Website (GitHub Pages)
+
+A repo usage guide is available as a GitHub Pages site from `docs/index.md`.
+
+- Source page: [`docs/index.md`](docs/index.md)
+- Workflow: [`.github/workflows/pages.yml`](.github/workflows/pages.yml)
+
+After pushing to `main`, the workflow deploys the site via GitHub Actions Pages.
+
 ## Features
 
 - **⚡ Hardware Acceleration:** Fully leverages Kernel-based Virtual Machine (`/dev/kvm`) architecture passed down through the underlying Azure cloud layer.
